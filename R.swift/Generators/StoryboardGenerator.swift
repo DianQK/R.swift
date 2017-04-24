@@ -16,14 +16,14 @@ struct StoryboardStructGenerator: StructGenerator {
     self.storyboards = storyboards
   }
 
-  func generatedStructs(at externalAccessLevel: AccessLevel) -> StructGenerator.Result {
+  func generatedStructs(at externalAccessLevel: AccessLevel, withStructName structName: String) -> StructGenerator.Result {
     let groupedStoryboards = storyboards.groupedBySwiftIdentifier { $0.name }
     groupedStoryboards.printWarningsForDuplicatesAndEmpties(source: "storyboard", result: "file")
 
     let storyboardTypes = groupedStoryboards
       .uniques
       .map { storyboard -> (Struct, Let, Function) in
-        let _struct = storyboardStruct(for: storyboard, at: externalAccessLevel)
+        let _struct = storyboardStruct(for: storyboard, at: externalAccessLevel, withStructName: structName)
 
         let _property = Let(
           comments: ["Storyboard `\(storyboard.name)`."],
@@ -31,7 +31,7 @@ struct StoryboardStructGenerator: StructGenerator {
           isStatic: true,
           name: _struct.type.name,
           typeDefinition: .inferred(Type.StoryboardResourceType),
-          value: "_R.storyboard.\(_struct.type.name)()"
+          value: "_\(structName).storyboard.\(_struct.type.name)()"
         )
 
         let _function = Function(
@@ -45,14 +45,14 @@ struct StoryboardStructGenerator: StructGenerator {
           ],
           doesThrow: false,
           returnType: Type._UIStoryboard,
-          body: "return UIKit.UIStoryboard(resource: R.storyboard.\(_struct.type.name))"
+          body: "return UIKit.UIStoryboard(resource: \(structName).storyboard.\(_struct.type.name))"
         )
 
         return (_struct, _property, _function)
       }
 
     let externalStruct = Struct(
-        comments: ["This `R.storyboard` struct is generated, and contains static references to \(storyboardTypes.count) storyboards."],
+        comments: ["This `\(structName).storyboard` struct is generated, and contains static references to \(storyboardTypes.count) storyboards."],
         accessModifier: externalAccessLevel,
         type: Type(module: .host, name: "storyboard"),
         implements: [],
@@ -81,13 +81,13 @@ struct StoryboardStructGenerator: StructGenerator {
     )
   }
 
-  private func storyboardStruct(for storyboard: Storyboard, at externalAccessLevel: AccessLevel) -> Struct {
+  private func storyboardStruct(for storyboard: Storyboard, at externalAccessLevel: AccessLevel, withStructName structName: String) -> Struct {
     var implements: [TypePrinter] = []
     var typealiasses: [Typealias] = []
     var functions: [Function] = []
     var properties: [Let] = [
       Let(comments: [], accessModifier: externalAccessLevel, isStatic: false, name: "name", typeDefinition: .inferred(Type._String), value: "\"\(storyboard.name)\""),
-      Let(comments: [], accessModifier: externalAccessLevel, isStatic: false, name: "bundle", typeDefinition: .inferred(Type._Bundle), value: "R.hostingBundle")
+      Let(comments: [], accessModifier: externalAccessLevel, isStatic: false, name: "bundle", typeDefinition: .inferred(Type._Bundle), value: "\(structName).hostingBundle")
     ]
 
     // Initial view controller
@@ -153,7 +153,7 @@ struct StoryboardStructGenerator: StructGenerator {
     let validateViewControllersLines = groupedViewControllersWithIdentifier.uniques
       .flatMap { vc, _ in
         vc.storyboardIdentifier.map {
-          "if _R.storyboard.\(SwiftIdentifier(name: storyboard.name))().\(SwiftIdentifier(name: $0))() == nil { throw Rswift.ValidationError(description:\"[R.swift] ViewController with identifier '\(SwiftIdentifier(name: $0))' could not be loaded from storyboard '\(storyboard.name)' as '\(vc.type)'.\") }"
+          "if _\(structName).storyboard.\(SwiftIdentifier(name: storyboard.name))().\(SwiftIdentifier(name: $0))() == nil { throw Rswift.ValidationError(description:\"[R.swift] ViewController with identifier '\(SwiftIdentifier(name: $0))' could not be loaded from storyboard '\(storyboard.name)' as '\(vc.type)'.\") }"
         }
       }
     let validateLines = validateImagesLines + validateViewControllersLines

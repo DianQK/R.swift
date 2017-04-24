@@ -18,7 +18,7 @@ struct ImageStructGenerator: ExternalOnlyStructGenerator {
     self.images = images
   }
 
-  func generatedStruct(at externalAccessLevel: AccessLevel) -> Struct {
+  func generatedStruct(at externalAccessLevel: AccessLevel, withStructName structName: String) -> Struct {
     let assetFolderImageNames = assetFolders
       .flatMap { $0.imageAssets }
 
@@ -41,24 +41,24 @@ struct ImageStructGenerator: ExternalOnlyStructGenerator {
           isStatic: true,
           name: SwiftIdentifier(name: name),
           typeDefinition: .inferred(Type.ImageResource),
-          value: "Rswift.ImageResource(bundle: R.hostingBundle, name: \"\(name)\")"
+          value: "Rswift.ImageResource(bundle: \(structName).hostingBundle, name: \"\(name)\")"
         )
       }
 
     return Struct(
-      comments: ["This `R.image` struct is generated, and contains static references to \(imageLets.count) images."],
+      comments: ["This `\(structName).image` struct is generated, and contains static references to \(imageLets.count) images."],
       accessModifier: externalAccessLevel,
       type: Type(module: .host, name: "image"),
       implements: [],
       typealiasses: [],
       properties: imageLets,
-      functions: groupedFunctions.uniques.map { imageFunction(for: $0, at: externalAccessLevel) },
+      functions: groupedFunctions.uniques.map { imageFunction(for: $0, at: externalAccessLevel, withStructName: structName) },
       structs: [],
       classes: []
     )
   }
 
-  private func imageFunction(for name: String, at externalAccessLevel: AccessLevel) -> Function {
+  private func imageFunction(for name: String, at externalAccessLevel: AccessLevel, withStructName structName: String) -> Function {
     return Function(
       comments: ["`UIImage(named: \"\(name)\", bundle: ..., traitCollection: ...)`"],
       accessModifier: externalAccessLevel,
@@ -75,7 +75,7 @@ struct ImageStructGenerator: ExternalOnlyStructGenerator {
       ],
       doesThrow: false,
       returnType: Type._UIImage.asOptional(),
-      body: "return UIKit.UIImage(resource: R.image.\(SwiftIdentifier(name: name)), compatibleWith: traitCollection)"
+      body: "return UIKit.UIImage(resource: \(structName).image.\(SwiftIdentifier(name: name)), compatibleWith: traitCollection)"
     )
   }
 }

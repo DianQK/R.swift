@@ -17,7 +17,7 @@ struct ColorStructGenerator: ExternalOnlyStructGenerator {
     self.palettes = palettes
   }
 
-  func generatedStruct(at externalAccessLevel: AccessLevel) -> Struct {
+  func generatedStruct(at externalAccessLevel: AccessLevel, withStructName structName: String) -> Struct {
     let groupedPalettes = palettes.groupedBySwiftIdentifier { $0.filename }
     groupedPalettes.printWarningsForDuplicatesAndEmpties(source: "color palette", result: "file")
 

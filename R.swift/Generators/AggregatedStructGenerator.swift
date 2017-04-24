@@ -16,15 +16,15 @@ class AggregatedStructGenerator: StructGenerator {
     self.subgenerators = subgenerators
   }
 
-  func generatedStructs(at externalAccessLevel: AccessLevel) -> StructGenerator.Result {
+  func generatedStructs(at externalAccessLevel: AccessLevel, withStructName structName: String) -> StructGenerator.Result {
     let collectedResult = subgenerators
-      .map { $0.generatedStructs(at: externalAccessLevel) }
+      .map { $0.generatedStructs(at: externalAccessLevel, withStructName: structName) }
       .reduce(StructGeneratorResultCollector()) { collector, result in collector.appending(result) }
 
     let externalStruct = Struct(
-      comments: ["This `R` struct is generated and contains references to static resources."],
+      comments: ["This `\(structName)` struct is generated and contains references to static resources."],
       accessModifier: externalAccessLevel,
-      type: Type(module: .host, name: "R"),
+      type: Type(module: .host, name: SwiftIdentifier(rawValue: structName)),
       implements: [],
       typealiasses: [],
       properties: [],
@@ -36,7 +36,7 @@ class AggregatedStructGenerator: StructGenerator {
     let internalStruct = Struct(
       comments: [],
       accessModifier: externalAccessLevel,
-      type: Type(module: .host, name: "_R"),
+      type: Type(module: .host, name: SwiftIdentifier(rawValue: "_\(structName)")),
       implements: [],
       typealiasses: [],
       properties: [],

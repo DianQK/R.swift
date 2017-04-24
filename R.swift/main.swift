@@ -41,12 +41,12 @@ do {
   ]
 
   let aggregatedResult = AggregatedStructGenerator(subgenerators: generators)
-    .generatedStructs(at: callInformation.accessLevel)
+    .generatedStructs(at: callInformation.accessLevel, withStructName: callInformation.structName)
 
   let (externalStructWithoutProperties, internalStruct) = ValidatedStructGenerator(validationSubject: aggregatedResult)
-    .generatedStructs(at: callInformation.accessLevel)
+    .generatedStructs(at: callInformation.accessLevel, withStructName: callInformation.structName)
 
-  let externalStruct = externalStructWithoutProperties.addingInternalProperties(forBundleIdentifier: callInformation.bundleIdentifier)
+  let externalStruct = externalStructWithoutProperties.addingInternalProperties(forBundleIdentifier: callInformation.bundleIdentifier, structName: callInformation.structName)
 
   let codeConvertibles: [SwiftCodeConverible?] = [
       HeaderPrinter(),
@@ -93,7 +93,7 @@ do {
     fail(description)
   case let .unsupportedExtension(givenExtension, supportedExtensions):
     let joinedSupportedExtensions = supportedExtensions.joined(separator: ", ")
-    fail("File extension '\(givenExtension)' is not one of the supported extensions: \(joinedSupportedExtensions)")
+    fail("File extension '\(String(describing: givenExtension))' is not one of the supported extensions: \(joinedSupportedExtensions)")
   }
 
   exit(3)

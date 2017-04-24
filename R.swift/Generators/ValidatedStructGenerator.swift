@@ -10,13 +10,14 @@
 import Foundation
 
 class ValidatedStructGenerator: StructGenerator {
+
   private let validationSubject: StructGenerator.Result
 
   init(validationSubject: StructGenerator.Result) {
     self.validationSubject = validationSubject
   }
 
-  func generatedStructs(at externalAccessLevel: AccessLevel) -> StructGenerator.Result {
+  func generatedStructs(at externalAccessLevel: AccessLevel, withStructName structName: String) -> StructGenerator.Result {
 
     let internalStruct = validationSubject.internalStruct?
       .addingChildStructValidationMethods(at: externalAccessLevel)

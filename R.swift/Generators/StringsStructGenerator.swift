@@ -16,29 +16,29 @@ struct StringsStructGenerator: ExternalOnlyStructGenerator {
     self.localizableStrings = localizableStrings
   }
 
-  func generatedStruct(at externalAccessLevel: AccessLevel) -> Struct {
+  func generatedStruct(at externalAccessLevel: AccessLevel, withStructName structName: String) -> Struct {
     let localized = localizableStrings.groupBy { $0.filename }
     let groupedLocalized = localized.groupedBySwiftIdentifier { $0.0 }
 
     groupedLocalized.printWarningsForDuplicatesAndEmpties(source: "strings file", result: "file")
 
     return Struct(
-      comments: ["This `R.string` struct is generated, and contains static references to \(groupedLocalized.uniques.count) localization tables."],
+      comments: ["This `\(structName).string` struct is generated, and contains static references to \(groupedLocalized.uniques.count) localization tables."],
       accessModifier: externalAccessLevel,
       type: Type(module: .host, name: "string"),
       implements: [],
       typealiasses: [],
       properties: [],
       functions: [],
-      structs: groupedLocalized.uniques.flatMap { stringStructFromLocalizableStrings(filename: $0.0, strings: $0.1, at: externalAccessLevel) },
+      structs: groupedLocalized.uniques.flatMap { stringStructFromLocalizableStrings(filename: $0.0, strings: $0.1, at: externalAccessLevel, withStructName: structName) },
       classes: []
     )
   }
 
-  private func stringStructFromLocalizableStrings(filename: String, strings: [LocalizableStrings], at externalAccessLevel: AccessLevel) -> Struct? {
+  private func stringStructFromLocalizableStrings(filename: String, strings: [LocalizableStrings], at externalAccessLevel: AccessLevel, withStructName structName: String) -> Struct? {
 
     let name = SwiftIdentifier(name: filename)
-    let params = computeParams(filename: filename, strings: strings)
+    let params = computeParams(filename: filename, strings: strings, withStructName: structName)
 
     return Struct(
       comments: ["This `R.string.\(name)` struct is generated, and contains static references to \(params.count) localization keys."],
@@ -46,8 +46,8 @@ struct StringsStructGenerator: ExternalOnlyStructGenerator {
       type: Type(module: .host, name: name),
       implements: [],
       typealiasses: [],
-      properties: params.map { stringLet(values: $0, at: externalAccessLevel) },
-      functions: params.map { stringFunction(values: $0, at: externalAccessLevel) },
+      properties: params.map { stringLet(values: $0, at: externalAccessLevel, withStructName: structName) },
+      functions: params.map { stringFunction(values: $0, at: externalAccessLevel, withStructName: structName) },
       structs: [],
       classes: []
     )
@@ -55,7 +55,7 @@ struct StringsStructGenerator: ExternalOnlyStructGenerator {
 
   // Ahem, this code is a bit of a mess. It might need cleaning up... ;-)
   // Maybe when we pick up this issue: https://github.com/mac-cain13/R.swift/issues/136
-  private func computeParams(filename: String, strings: [LocalizableStrings]) -> [StringValues] {
+  private func computeParams(filename: String, strings: [LocalizableStrings], withStructName structName: String) -> [StringValues] {
 
     var allParams: [String: [(Locale, String, [StringParam])]] = [:]
     let baseKeys: Set<String>?
@@ -105,7 +105,7 @@ struct StringsStructGenerator: ExternalOnlyStructGenerator {
     }
 
     // Only include translation if it exists in Base
-    func includeTranslation(_ key: String) -> Bool {
+    func includeTranslation(_ key: String, withStructName structName: String) -> Bool {
       if let baseKeys = baseKeys {
         return baseKeys.contains(key)
       }
@@ -117,7 +117,7 @@ struct StringsStructGenerator: ExternalOnlyStructGenerator {
     var badFormatSpecifiersKeys = Set<String>()
 
     // Unify format specifiers
-    for (key, keyParams) in allParams.filter({ includeTranslation($0.0) }).sortBy({ $0.0 }) {
+    for (key, keyParams) in allParams.filter({ includeTranslation($0.0, withStructName: structName) }).sortBy({ $0.0 }) {
       var params: [StringParam] = []
       var areCorrectFormatSpecifiers = true
 
@@ -146,7 +146,7 @@ struct StringsStructGenerator: ExternalOnlyStructGenerator {
       if !areCorrectFormatSpecifiers { continue }
 
       let vals = keyParams.map { ($0.0, $0.1) }
-      let values = StringValues(key: key, params: params, tableName: filename, values: vals )
+      let values = StringValues(key: key, params: params, tableName: filename, values: vals, structName: structName )
       results.append(values)
     }
 
@@ -162,7 +162,7 @@ struct StringsStructGenerator: ExternalOnlyStructGenerator {
     return results
   }
 
-  private func stringLet(values: StringValues, at externalAccessLevel: AccessLevel) -> Let {
+  private func stringLet(values: StringValues, at externalAccessLevel: AccessLevel, withStructName structName: String) -> Let {
     let escapedKey = values.key.escapedStringLiteral
     let locales = values.values
       .map { $0.0 }
@@ -176,16 +176,16 @@ struct StringsStructGenerator: ExternalOnlyStructGenerator {
       isStatic: true,
       name: SwiftIdentifier(name: values.key),
       typeDefinition: .inferred(Type.StringResource),
-      value: "Rswift.StringResource(key: \"\(escapedKey)\", tableName: \"\(values.tableName)\", bundle: R.hostingBundle, locales: [\(locales)], comment: nil)"
+      value: "Rswift.StringResource(key: \"\(escapedKey)\", tableName: \"\(values.tableName)\", bundle: \(structName).hostingBundle, locales: [\(locales)], comment: nil)"
     )
   }
 
-  private func stringFunction(values: StringValues, at externalAccessLevel: AccessLevel) -> Function {
+  private func stringFunction(values: StringValues, at externalAccessLevel: AccessLevel, withStructName structName: String) -> Function {
     if values.params.isEmpty {
       return stringFunctionNoParams(for: values, at: externalAccessLevel)
     }
     else {
-      return stringFunctionParams(for: values, at: externalAccessLevel)
+      return stringFunctionParams(for: values, at: externalAccessLevel, withStructName: structName)
     }
   }
 
@@ -206,7 +206,7 @@ struct StringsStructGenerator: ExternalOnlyStructGenerator {
     )
   }
 
-  private func stringFunctionParams(for values: StringValues, at externalAccessLevel: AccessLevel) -> Function {
+  private func stringFunctionParams(for values: StringValues, at externalAccessLevel: AccessLevel, withStructName structName: String) -> Function {
 
     let params = values.params.enumerated().map { ix, param -> Function.Parameter in
       let argumentLabel = param.name ?? "_"
@@ -226,7 +226,7 @@ struct StringsStructGenerator: ExternalOnlyStructGenerator {
       parameters: params,
       doesThrow: false,
       returnType: Type._String,
-      body: "return String(format: \(values.localizedString), locale: R.applicationLocale, \(args))"
+      body: "return String(format: \(values.localizedString), locale: \(structName).applicationLocale, \(args))"
     )
   }
 
@@ -250,15 +250,16 @@ private struct StringValues {
   let params: [StringParam]
   let tableName: String
   let values: [(Locale, String)]
+  let structName: String
 
   var localizedString: String {
     let escapedKey = key.escapedStringLiteral
 
     if tableName == "Localizable" {
-      return "NSLocalizedString(\"\(escapedKey)\", bundle: R.hostingBundle, comment: \"\")"
+      return "NSLocalizedString(\"\(escapedKey)\", bundle: \(structName).hostingBundle, comment: \"\")"
     }
     else {
-      return "NSLocalizedString(\"\(escapedKey)\", tableName: \"\(tableName)\", bundle: R.hostingBundle, comment: \"\")"
+      return "NSLocalizedString(\"\(escapedKey)\", tableName: \"\(tableName)\", bundle: \(structName).hostingBundle, comment: \"\")"
     }
   }
 

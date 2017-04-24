@@ -90,6 +90,12 @@ private let productModuleNameOption = Option(
   numberOfParameters: 1,
   helpDescription: "Product module name the R-file is generated for, is none given R.swift will use the environment variable PRODUCT_MODULE_NAME"
 )
+private let structNameOption = Option(
+  trigger: .long("structName"),
+  numberOfParameters: 1,
+  helpDescription: "R-file Struct Name"
+)
+
 private let buildProductsDirOption = Option(
   trigger: .long("buildProductsDir"),
   numberOfParameters: 1,
@@ -125,6 +131,7 @@ private let AllOptions = [
   sourceRootOption,
   sdkRootOption,
   productModuleNameOption,
+  structNameOption
 ]
 
 struct CallInformation {
@@ -133,6 +140,7 @@ struct CallInformation {
   
   let edge: Bool
   let accessLevel: AccessLevel
+  let structName: String
   let imports: Set<Module>
 
   let xcodeprojURL: URL
@@ -226,6 +234,8 @@ struct CallInformation {
 
       let relativeIgnorePath = try getFirstArgumentForOption(rswiftIgnoreOption, ".rswiftignore")
       rswiftIgnoreURL = sourceRootURL.appendingPathComponent(relativeIgnorePath, isDirectory: false)
+
+      structName = try getFirstArgumentForOption(structNameOption, "R")
     } catch let OptionKitError.invalidOption(invalidOption) {
       throw InputParsingError.illegalOption(
         error: "The option '\(invalidOption)' is invalid.",

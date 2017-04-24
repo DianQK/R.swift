@@ -39,7 +39,7 @@ struct NibStructGenerator: StructGenerator {
     self.nibs = nibs
   }
 
-  func generatedStructs(at externalAccessLevel: AccessLevel) -> StructGenerator.Result {
+  func generatedStructs(at externalAccessLevel: AccessLevel, withStructName structName: String) -> StructGenerator.Result {
     let groupedNibs = nibs.groupedBySwiftIdentifier { $0.name }
     groupedNibs.printWarningsForDuplicatesAndEmpties(source: "xib", result: "file")
 
@@ -53,19 +53,19 @@ struct NibStructGenerator: StructGenerator {
       functions: [],
       structs: groupedNibs
         .uniques
-        .map { nibStruct(for: $0, at: externalAccessLevel) },
+        .map { nibStruct(for: $0, at: externalAccessLevel, withStructName: structName) },
       classes: []
     )
 
     let nibProperties: [Let] = groupedNibs
       .uniques
-      .map { nibVar(for: $0, at: externalAccessLevel) }
+      .map { nibVar(for: $0, at: externalAccessLevel, withStructName: structName) }
     let nibFunctions: [Function] = groupedNibs
       .uniques
-      .map { nibFunc(for: $0, at: externalAccessLevel) }
+      .map { nibFunc(for: $0, at: externalAccessLevel, withStructName: structName) }
 
     let externalStruct = Struct(
-      comments: ["This `R.nib` struct is generated, and contains static references to \(nibProperties.count) nibs."],
+      comments: ["This `\(structName).nib` struct is generated, and contains static references to \(nibProperties.count) nibs."],
       accessModifier: externalAccessLevel,
       type: Type(module: .host, name: "nib"),
       implements: [],
@@ -82,7 +82,7 @@ struct NibStructGenerator: StructGenerator {
     )
   }
 
-  private func nibFunc(for nib: Nib, at externalAccessLevel: AccessLevel) -> Function {
+  private func nibFunc(for nib: Nib, at externalAccessLevel: AccessLevel, withStructName structName: String) -> Function {
     return Function(
       comments: ["`UINib(name: \"\(nib.name)\", in: bundle)`"],
       accessModifier: externalAccessLevel,
@@ -94,13 +94,13 @@ struct NibStructGenerator: StructGenerator {
       ],
       doesThrow: false,
       returnType: Type._UINib,
-      body: "return UIKit.UINib(resource: R.nib.\(SwiftIdentifier(name: nib.name)))"
+      body: "return UIKit.UINib(resource: \(structName).nib.\(SwiftIdentifier(name: nib.name)))"
     )
   }
 
-  private func nibVar(for nib: Nib, at externalAccessLevel: AccessLevel) -> Let {
+  private func nibVar(for nib: Nib, at externalAccessLevel: AccessLevel, withStructName structName: String) -> Let {
     let nibStructName = SwiftIdentifier(name: "_\(nib.name)")
-    let structType = Type(module: .host, name: SwiftIdentifier(rawValue: "_R.nib.\(nibStructName)"))
+    let structType = Type(module: .host, name: SwiftIdentifier(rawValue: "_\(structName).nib.\(nibStructName)"))
     return Let(
       comments: ["Nib `\(nib.name)`."],
       accessModifier: externalAccessLevel,
@@ -111,7 +111,7 @@ struct NibStructGenerator: StructGenerator {
     )
   }
 
-  private func nibStruct(for nib: Nib, at externalAccessLevel: AccessLevel) -> Struct {
+  private func nibStruct(for nib: Nib, at externalAccessLevel: AccessLevel, withStructName structName: String) -> Struct {
     let instantiateParameters = [
       Function.Parameter(name: "owner", localName: "ownerOrNil", type: Type._AnyObject.asOptional()),
       Function.Parameter(name: "options", localName: "optionsOrNil", type: Type(module: .stdLib, name: SwiftIdentifier(rawValue: "[NSObject : AnyObject]"), optional: true), defaultValue: "nil")
@@ -123,7 +123,7 @@ struct NibStructGenerator: StructGenerator {
       isStatic: false,
       name: "bundle",
       typeDefinition: .inferred(Type._Bundle),
-      value: "R.hostingBundle"
+      value: "\(structName).hostingBundle"
     )
 
     let nameVar = Let(
@@ -176,7 +176,7 @@ struct NibStructGenerator: StructGenerator {
     // Validation
     let validateImagesLines = Set(nib.usedImageIdentifiers)
       .map {
-        "if UIKit.UIImage(named: \"\($0)\", in: R.hostingBundle, compatibleWith: nil) == nil { throw Rswift.ValidationError(description: \"[R.swift] Image named '\($0)' is used in nib '\(nib.name)', but couldn't be loaded.\") }"
+        "if UIKit.UIImage(named: \"\($0)\", in: \(structName).hostingBundle, compatibleWith: nil) == nil { throw Rswift.ValidationError(description: \"[R.swift] Image named '\($0)' is used in nib '\(nib.name)', but couldn't be loaded.\") }"
     }
 
     var validateFunctions: [Function] = []

@@ -8,7 +8,7 @@ DEPENDENCIES:
 
 EXTERNAL SOURCES:
   R.swift.Library:
-    :path: ./R.swift.Library
+    :path: "./R.swift.Library"
 
 SPEC CHECKSUMS:
   R.swift.Library: fbdec16c9802ad104fc1ba53415dc190e6ec5c73
@@ -16,4 +16,4 @@ SPEC CHECKSUMS:
 
 PODFILE CHECKSUM: 01a9adda3d0351316eaba0604673348a62d0ea9d
 
-COCOAPODS: 1.2.0
+COCOAPODS: 1.2.1

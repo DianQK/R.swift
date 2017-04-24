@@ -18,7 +18,7 @@ struct SegueStructGenerator: ExternalOnlyStructGenerator {
     self.storyboards = storyboards
   }
 
-  func generatedStruct(at externalAccessLevel: AccessLevel) -> Struct {
+  func generatedStruct(at externalAccessLevel: AccessLevel, withStructName structName: String) -> Struct {
     let seguesWithInfo = storyboards.flatMap { storyboard in
       storyboard.viewControllers.flatMap { viewController in
         viewController.segues.flatMap { segue -> SegueWithInfo? in
@@ -56,13 +56,13 @@ struct SegueStructGenerator: ExternalOnlyStructGenerator {
         .uniques
         .groupBy { $0.sourceType }
         .values
-        .flatMap { self.seguesWithInfoForSourceTypeToStruct($0, at: externalAccessLevel) }
+        .flatMap { self.seguesWithInfoForSourceTypeToStruct($0, at: externalAccessLevel, withStructName: structName) }
 
       structs = structs + sts
     }
 
     return Struct(
-      comments: ["This `R.segue` struct is generated, and contains static references to \(structs.count) view controllers."],
+      comments: ["This `\(structName).segue` struct is generated, and contains static references to \(structs.count) view controllers."],
       accessModifier: externalAccessLevel,
       type: Type(module: .host, name: "segue"),
       implements: [],
@@ -99,7 +99,7 @@ struct SegueStructGenerator: ExternalOnlyStructGenerator {
     return destinationViewControllerType ?? destinationViewControllerPlaceholderType
   }
 
-  private func seguesWithInfoForSourceTypeToStruct(_ seguesWithInfoForSourceType: [SegueWithInfo], at externalAccessLevel: AccessLevel) -> Struct? {
+  private func seguesWithInfoForSourceTypeToStruct(_ seguesWithInfoForSourceType: [SegueWithInfo], at externalAccessLevel: AccessLevel, withStructName structName: String) -> Struct? {
     guard let sourceType = seguesWithInfoForSourceType.first?.sourceType else { return nil }
 
     let properties = seguesWithInfoForSourceType.map { segueWithInfo -> Let in
@@ -137,7 +137,7 @@ struct SegueStructGenerator: ExternalOnlyStructGenerator {
         returnType: Type.TypedStoryboardSegueInfo
           .asOptional()
           .withGenericArgs([segueWithInfo.segue.type, segueWithInfo.sourceType, segueWithInfo.destinationType]),
-        body: "return Rswift.TypedStoryboardSegueInfo(segueIdentifier: R.segue.\(SwiftIdentifier(name: sourceType.description)).\(SwiftIdentifier(name: segueWithInfo.segue.identifier)), segue: segue)"
+        body: "return Rswift.TypedStoryboardSegueInfo(segueIdentifier: \(structName).segue.\(SwiftIdentifier(name: sourceType.description)).\(SwiftIdentifier(name: segueWithInfo.segue.identifier)), segue: segue)"
       )
     }
 

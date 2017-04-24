@@ -16,7 +16,7 @@ struct ReuseIdentifierStructGenerator: ExternalOnlyStructGenerator {
     self.reusables = reusables
   }
 
-  func generatedStruct(at externalAccessLevel: AccessLevel) -> Struct {
+  func generatedStruct(at externalAccessLevel: AccessLevel, withStructName structName: String) -> Struct {
     let deduplicatedReusables = reusables
       .groupBy { $0.hashValue }
       .values

@@ -12,17 +12,17 @@ import Foundation
 protocol StructGenerator {
   typealias Result = (externalStruct: Struct, internalStruct: Struct?)
 
-  func generatedStructs(at externalAccessLevel: AccessLevel) -> Result
+  func generatedStructs(at externalAccessLevel: AccessLevel, withStructName structName: String) -> Result
 }
 
 protocol ExternalOnlyStructGenerator: StructGenerator {
-  func generatedStruct(at externalAccessLevel: AccessLevel) -> Struct
+  func generatedStruct(at externalAccessLevel: AccessLevel, withStructName structName: String) -> Struct
 }
 
 extension ExternalOnlyStructGenerator {
-  func generatedStructs(at externalAccessLevel: AccessLevel) -> StructGenerator.Result {
+  func generatedStructs(at externalAccessLevel: AccessLevel, withStructName structName: String) -> StructGenerator.Result {
     return (
-      generatedStruct(at: externalAccessLevel),
+      generatedStruct(at: externalAccessLevel, withStructName: structName),
       nil
     )
   }
