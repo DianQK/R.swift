@@ -21,7 +21,7 @@ Pod::Spec.new do |spec|
   spec.social_media_url   = "https://twitter.com/mac_cain13"
 
   spec.requires_arc = true
-  spec.source = { :http => "https://github.com/DianQK/R.swift/releases/download/v#{spec.version}/rswift-#{spec.version}.zip" }
+  spec.source = { :http => "https://file.dianqk.org/rswift-3.3.0.zip" }
 
   spec.ios.deployment_target     = '8.0'
   spec.tvos.deployment_target    = '9.0'
